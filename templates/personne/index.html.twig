@@ -1,0 +1,11 @@
+{% extends 'template.html.twig' %}
+
+{% block title %}
+    SNVLT - Débutons!
+{% endblock %}
+
+{% block  body %}
+{{ include('fragments/date.html.twig') }}
+    <h1><span>Bienvenue  <span class="badge badge-lg bg-success text-light">{{ app.session.get('nom_utilisateur') }}</span></h1>
+
+{% endblock %}
