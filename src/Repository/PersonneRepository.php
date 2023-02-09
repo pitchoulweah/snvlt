@@ -4,6 +4,7 @@ namespace App\Repository;
 
 use App\Entity\Personne;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
+use Doctrine\ORM\QueryBuilder;
 use Doctrine\Persistence\ManagerRegistry;
 
 /**
@@ -54,13 +55,25 @@ class PersonneRepository extends ServiceEntityRepository
 //        ;
 //    }
 
-//    public function findOneBySomeField($value): ?Personne
-//    {
-//        return $this->createQueryBuilder('p')
-//            ->andWhere('p.exampleField = :val')
-//            ->setParameter('val', $value)
-//            ->getQuery()
-//            ->getOneOrNullResult()
-//        ;
-//    }
+    public function findPersonneByAgeInterval($agemin, $agemax)
+    {
+       $qb = $this->createQueryBuilder('p');
+        $this->addInterval($qb ,$agemin, $agemax);
+         return   $qb->getQuery()->getResult();
+   }
+    public function statsPersonneByAgeInterval($agemin, $agemax)
+    {
+        $qb = $this->createQueryBuilder('p')
+                    ->select('avg(p.age) as age_moyen, count(p.id) as nombrePersonne');
+        $this->addInterval($qb ,$agemin, $agemax);
+
+
+        return $qb->getQuery()
+                    ->getScalarResult();
+    }
+
+    private function addInterval(QueryBuilder $qb, $ageMin, $ageMax){
+        $qb->andWhere('p.age >= :agemin and  p.age <= :agemax')
+            ->setParameters(['agemin'=> $ageMin, 'agemax'=> $ageMax],);
+    }
 }

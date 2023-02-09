@@ -1,11 +1,63 @@
 {% extends 'template.html.twig' %}
 
 {% block title %}
-    SNVLT - Débutons!
+    SNVLT - Utilisateuèrs
 {% endblock %}
 
+{% block PageTitle%}
+     Liste des utilisateurs
+ {% endblock %}
+
 {% block  body %}
-{{ include('fragments/date.html.twig') }}
-    <h1><span>Bienvenue  <span class="badge badge-lg bg-success text-light">{{ app.session.get('nom_utilisateur') }}</span></h1>
+
+
+
+    <h3 class="text-danger"></h3>
+    <div class="row" >
+
+        {% for personne in liste_personne %}
+
+            <div class="card" style="width: 18rem;">
+                <div class="card-body">
+                    <h5 class="card-title">{{ personne.lastname }} </h5>
+                    <p class="card-text">{{ personne.firstname }} {{ personne.lastname }}</p>
+                    <p class="card-text">{{ personne.age }} ans</p>
+                    <a href="{{ path('personne.detail', {id: personne.id}) }}" class="new link">Détails</a>
+                    <a href="{{ path('personne.delete', {id: personne.id}) }}" class="new link">supprimer</a>
+                </div>
+            </div>
+
+        {% endfor %}
+    </div>
+
+    {% if isPaginated is defined and isPaginated %}
+    <div class="row mt-2" >
+    <nav aria-label="Page navigation example">
+        <ul class="pagination justify-content-end">
+
+            {% if(page != 1) %}
+            <li class="page-item">
+                <a class="page-link" href="{{ path('personne.alls',{page: page - 1 , nbre:nbre}) }}" tabindex="-1">Précédent</a>
+            </li>
+            {% endif %}
+
+                {% for i in range(1, nbrePages) %}
+                    <li class="page-item">
+                        <a class="page-link" href="{{ path('personne.alls',{page: i, nbre:nbre}) }}">
+                            {{ i }}
+                        </a>
+                    </li>
+                {% endfor %}
+
+            {% if(page != nbrePages) %}
+                <li class="page-item">
+                    <a class="page-link" href="{{ path('personne.alls',{page: page + 1, nbre:nbre}) }}" tabindex="-1">Suivant</a>
+                </li>
+            {% endif %}
+
+        </ul>
+    </nav>
+    </div>
+    {% endif %}
 
 {% endblock %}
