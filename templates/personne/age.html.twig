@@ -1,0 +1,11 @@
+{% extends 'webapp_template.html.twig' %}
+
+{% block title %}
+    U{{ personne.firstname }}  {{ personne.lastname }}
+{% endblock %}
+
+{% block  body %}
+    <div class="alert alert-success" >
+       {{ personne.firstname }}  {{ personne.lastname }}  {{ personne.age }} ans  a été ajouté
+    </div>
+{% endblock %}

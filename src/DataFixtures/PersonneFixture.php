@@ -19,8 +19,6 @@ class PersonneFixture extends Fixture
          $personne->setFirstname($faker->firstName);
          $personne->setLastname($faker->name);
          $personne->setAge($faker->numberBetween(18,65));
-         $personne->setJob($faker->company);
-
          $manager->persist($personne);
      }
         $manager->flush();

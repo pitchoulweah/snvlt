@@ -3,18 +3,20 @@
 namespace App\Controller;
 
 use Doctrine\Persistence\ManagerRegistry;
-use Doctrine\Tests\Models\Cache\Person;
 use App\Entity\Personne;
+use App\Form\PersonneType;
+use App\Services\UploaderService;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\RedirectResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Annotation\Route;
+use Symfony\Component\String\Slugger\SluggerInterface;
 
 #[Route('/personne')]
 class PersonneController extends AbstractController
 {
-    #[Route('/', name: 'personne')]
+    #[Route('/liste', name: 'personne')]
     public function index(ManagerRegistry $doctrine): Response
     {
         $repository = $doctrine->getRepository(Personne::class);
@@ -38,22 +40,103 @@ class PersonneController extends AbstractController
 
     }
 
-    #[Route('/add', name: 'personne.add')]
-    public function add(ManagerRegistry $doctrine): Response
-    {
-        $entityManager = $doctrine->getManager();
-        $personne = new Personne();
-            $personne->setFirstname('Léa');
-            $personne->setLastname('YAO');
-            $personne->setAge(32);
-            $personne->setJob('Opératrice de saisie');
 
-        $entityManager->persist($personne);
-        $entityManager->flush();
-        return $this->render('personne/add.html.twig',[
-        'personne'=> $personne
+    #[Route('/add-personne', name: 'personne.add')]
+    public function addPersonne(ManagerRegistry $doctrine, Request $request, SluggerInterface $slugger): Response
+    {
+
+
+        $personne = new Personne();
+
+        $form = $this->createForm(PersonneType::class, $personne);
+        $form->remove('createdAt');
+        $form->remove('updatedAt');
+
+        $form->handleRequest($request);
+
+        if ($form->isSubmitted() && $form->isValid()){
+
+            $photo = $form->get('photo')->getData();
+
+            // this condition is needed because the 'brochure' field is not required
+            // so the PDF file must be processed only when a file is uploaded
+            if ($photo) {
+                $originalFilename = pathinfo($photo->getClientOriginalName(), PATHINFO_FILENAME);
+                // this is needed to safely include the file name as part of the URL
+                $safeFilename = $slugger->slug($originalFilename);
+                $newFilename = $safeFilename.'-'.uniqid().'.'.$photo->guessExtension();
+
+                // Move the file to the directory where brochures are stored
+                try {
+                    $photo->move(
+                        $this->getParameter('personnes_directory'),
+                        $newFilename
+                    );
+                } catch (FileException $e) {
+                    // ... handle exception if something happens during file upload
+                }
+
+                // updates the 'brochureFilename' property to store the PDF file name
+                // instead of its contents
+                $personne->setImage($newFilename);
+            }
+
+            $manager = $doctrine->getManager();
+            $manager->persist($personne);
+            $manager->flush();
+
+            $this->addFlash('success','La personne vient dêtre enregistrée');
+            return $this->redirectToRoute("personne");
+        } else {
+            return $this->render('personne/add-personne.html.twig',[
+                'form' =>$form->createView()
             ]);
+        }
     }
+
+    #[Route('/edit/{id?0}', name: 'personne.edit')]
+    public function editPersonne(
+        Personne $personne = null,
+        ManagerRegistry $doctrine,
+        Request $request,
+        UploaderService $uploaderService): Response
+    {
+
+        if(!$personne){
+            $personne = new Personne();
+        }
+
+        $form = $this->createForm(PersonneType::class, $personne);
+        $form->remove('createdAt');
+        $form->remove('updatedAt');
+
+        $form->handleRequest($request);
+
+        if ( $form->isSubmitted() && $form->isValid() ){
+
+            $photo = $form->get('photo')->getData();
+
+            if ($photo) {
+
+                $directory = $this->getParameter('personnes_directory');
+
+                $personne->setImage($uploaderService->uploadFile($photo,  $directory));
+            }
+
+
+            $manager = $doctrine->getManager();
+            $manager->persist($personne);
+            $manager->flush();
+
+            $this->addFlash('success','La personne vient dêtre édité avec succès');
+            return $this->redirectToRoute("personne");
+        } else {
+            return $this->render('personne/add-personne.html.twig',[
+                'form' =>$form->createView()
+            ]);
+        }
+    }
+
 
     #[Route('/alls/{page?1}/{nbre?12}', name: 'personne.alls')]
     public function alls(ManagerRegistry $doctrine, $page, $nbre): Response
@@ -132,7 +215,7 @@ class PersonneController extends AbstractController
         $stats = $repository->statsPersonneByAgeInterval($agemin, $agemax);
         return $this->render('personne/stats.html.twig',[
             'stats'=>$stats[0],
-            
+
             'ageMin'=>$agemin,
             'ageMax'=>$agemax
         ]);
